@@ -735,8 +735,11 @@
     .category-sidebar {
       position: sticky;
       top: 76px;
-      min-height: calc(100vh - 76px);
+      height: calc(100vh - 76px);
       padding: 32px 24px 48px 0;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      scrollbar-width: thin;
       border-right: 1px solid var(--line);
     }
 
@@ -1033,7 +1036,7 @@
         <div>
           <h1>文本创作 Skill 全集</h1>
         </div>
-        <div class="top-meta"><i class="live-dot"></i><span id="topTimestamp">数据快照 2026-07-20</span></div>
+        <div class="top-meta"><i class="live-dot"></i><span id="topTimestamp">数据快照 2026-07-21</span></div>
       </section>
 
       <section class="summary-band" aria-label="监控摘要">
@@ -1127,7 +1130,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    const SNAPSHOT_DATE = "2026-07-20";
+    const SNAPSHOT_DATE = "2026-07-21";
     const MIN_HEAT = 500;
 
     let skills = [
