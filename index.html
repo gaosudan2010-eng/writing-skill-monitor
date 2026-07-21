@@ -1207,6 +1207,7 @@
 
       <section class="footnotes">
         <div><strong>对象口径：</strong>平台记录按“仓库 + Skill 路径”归并为原子 Skill；同名但不同作者或仓库的实现不合并。合集与项目单独统计，不计入原子 Skill。</div>
+        <div><strong>分类口径：</strong>按 Skill 的主要任务与交付物分类。去 AI、校对和改写归编辑润色；党政机关规范文本归公文写作；中文媒体平台内容归新媒体写作；论文及其研究发表流程归学术论文。</div>
         <div><strong>指标口径：</strong>安装量和下载量属于原子 Skill 直接指标；合集总量属于聚合指标；GitHub 子 Skill 展示的仓库 Star 属于继承指标。不同层级和平台的指标不相加。</div>
         <div><strong>安全提醒：</strong>公开 Skill 可能包含脚本、命令和外部依赖。安装前检查 <code>SKILL.md</code>、<code>scripts/</code>、权限要求与作者身份；官方市场收录也不等于由 Anthropic 编写。</div>
       </section>
@@ -1824,8 +1825,42 @@
       return "direct";
     }
 
+    const categoryOverrides = {
+      "humanizer-zh": "编辑润色",
+      "latex-thesis-zh": "学术论文",
+      "专业中文写稿助手": "中文创作"
+    };
+
+    function classifyCategory(skill) {
+      const name = String(skill.name || skill.key || "");
+      const tags = (skill.tags || []).join(" ");
+      const description = String(skill.description || "");
+      const text = `${name} ${tags} ${description}`;
+      const normalizedName = normalizeIdentity(name);
+
+      if (skill.category === "合集与目录") return skill.category;
+      if (categoryOverrides[normalizedName]) return categoryOverrides[normalizedName];
+
+      const editingName = /humaniz|proofread|proofreading|polish|polishing|refiner|de-ai|去-?ai|去 ai|校对|校验|润色|shuorenhua|renwei|speak-human/i;
+      if (editingName.test(name)) return "编辑润色";
+
+      const governmentStandard = /党政|机关公文|gb\/t\s*9704|红头文件|政务公文/i;
+      const governmentIdentity = /公文/i.test(`${name} ${tags}`);
+      if (governmentStandard.test(text) || governmentIdentity) return "公文写作";
+
+      const newMediaSignals = /公众号|小红书|知乎|微博|微信公众号|微信文章|抖音|视频号|今日头条|百家号|新媒体/i;
+      const newMediaEligible = ["中文创作", "社交媒体", "调研写作", "新媒体写作"].includes(skill.category);
+      if (newMediaEligible && newMediaSignals.test(text)) return "新媒体写作";
+
+      const academicPaperSignals = /论文|学位|文献综述|系统综述|引用|同行评审|审稿|期刊|投稿|litreview|rebuttal|latex|imrad|academic|scientific|paper|literature|citation|journal|nature|venue|thesis/i;
+      if (skill.category === "学术写作" && academicPaperSignals.test(text)) return "学术论文";
+
+      return skill.category;
+    }
+
     function enrichRecord(skill) {
       const objectType = skill.objectType || (skill.category === "合集与目录" ? "collection" : "atomic");
+      const category = classifyCategory(skill);
       const parentProject = repositoryFromRecord(skill);
       const skillPath = skillPathFromRecord(skill);
       const canonicalSkillId = skill.canonicalSkillId || (objectType === "atomic"
@@ -1833,6 +1868,7 @@
         : `collection::${parentProject}`);
       return {
         ...skill,
+        category,
         objectType,
         parentProject,
         skillPath,
@@ -1989,6 +2025,9 @@
       "多语言创作":"globe-2",
       "创作工具":"wrench",
       "调研写作":"search-check",
+      "公文写作":"landmark",
+      "新媒体写作":"smartphone",
+      "学术论文":"book-open-check",
       "合集与目录":"library"
     };
 
