@@ -174,6 +174,35 @@
       border-right: 1px solid var(--line);
     }
 
+    button.summary-item {
+      appearance: none;
+      color: inherit;
+      background: transparent;
+      font: inherit;
+      text-align: left;
+    }
+
+    .summary-filter {
+      position: relative;
+      cursor: pointer;
+      transition: color 150ms ease, background 150ms ease;
+    }
+
+    .summary-filter:hover { background: #f7f5f3; }
+    .summary-filter.active { background: #f1f5f3; }
+    .summary-filter.active .summary-label,
+    .summary-filter.active .summary-value { color: var(--accent); }
+    .summary-filter.active::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+    .summary-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
     .summary-item:last-child { border-right: 0; }
     .summary-label { color: var(--muted); font-size: 12px; margin-bottom: 5px; }
     .summary-value { font-size: 25px; line-height: 1.15; font-weight: 760; font-variant-numeric: tabular-nums; }
@@ -1040,16 +1069,16 @@
       </section>
 
       <section class="summary-band" aria-label="监控摘要">
-        <div class="summary-item">
+        <button class="summary-item summary-filter active" id="allRecordsFilter" type="button" data-scope="all" aria-pressed="true">
           <div class="summary-label">收录记录</div>
           <div class="summary-value" id="totalCount">0</div>
           <div class="summary-note">按平台分别记录</div>
-        </div>
-        <div class="summary-item">
+        </button>
+        <button class="summary-item summary-filter" id="uniqueSkillsFilter" type="button" data-scope="unique" aria-pressed="false">
           <div class="summary-label">独立 Skill / 项目</div>
           <div class="summary-value" id="uniqueCount">0</div>
-          <div class="summary-note">已做名称去重</div>
-        </div>
+          <div class="summary-note">每个 Skill 仅保留一条</div>
+        </button>
         <div class="summary-item">
           <div class="summary-label">Anthropic 官方</div>
           <div class="summary-value" id="officialCount">0</div>
@@ -1676,6 +1705,7 @@
     };
 
     const state = {
+      scope: "all",
       source: "all",
       query: "",
       category: "all",
@@ -1700,6 +1730,7 @@
       resultCount: document.getElementById("resultCount"),
       refresh: document.getElementById("refreshButton"),
       export: document.getElementById("exportButton"),
+      scopeFilters: [...document.querySelectorAll("[data-scope]")],
       toast: document.getElementById("toast")
     };
 
@@ -1719,8 +1750,38 @@
       return skill.metricLabel;
     }
 
+    const sourceRank = { official:4, skillssh:3, clawhub:2, github:1 };
+
+    function independentSkills() {
+      const groups = new Map();
+      skills.forEach(skill => {
+        const key = skill.key || skill.id;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(skill);
+      });
+
+      return [...groups.values()].map(group => {
+        const representative = [...group].sort((a, b) =>
+          (sourceRank[b.source] || 0) - (sourceRank[a.source] || 0) ||
+          (trustMeta[b.trust]?.rank || 0) - (trustMeta[a.trust]?.rank || 0) ||
+          (b.priority || 0) - (a.priority || 0) ||
+          a.name.localeCompare(b.name, "zh-CN")
+        )[0];
+        return {
+          ...representative,
+          mergedRecordCount: group.length,
+          mergedSources: [...new Set(group.map(skill => skill.source))]
+        };
+      });
+    }
+
+    function scopeSkills() {
+      return state.scope === "unique" ? independentSkills() : skills;
+    }
+
     function sourceCount(source) {
-      return source === "all" ? skills.length : skills.filter(skill => skill.source === source).length;
+      const scoped = scopeSkills();
+      return source === "all" ? scoped.length : scoped.filter(skill => skill.source === source).length;
     }
 
     function renderTabs() {
@@ -1767,7 +1828,8 @@
     }
 
     function renderCategoryNav() {
-      const sourceSkills = state.source === "all" ? skills : skills.filter(skill => skill.source === state.source);
+      const scoped = scopeSkills();
+      const sourceSkills = state.source === "all" ? scoped : scoped.filter(skill => skill.source === state.source);
       const entries = [
         { key:"all", label:"全部类别", icon:"layers-3", count:sourceSkills.length },
         ...categories.map(category => ({
@@ -1789,7 +1851,7 @@
 
     function filteredSkills() {
       const query = state.query.trim().toLowerCase();
-      const result = skills.filter(skill => {
+      const result = scopeSkills().filter(skill => {
         if (state.source !== "all" && skill.source !== state.source) return false;
         if (state.category !== "all" && skill.category !== state.category) return false;
         if (state.bookmarkOnly && !state.bookmarks.has(skill.id)) return false;
@@ -1816,7 +1878,10 @@
 
     function renderRows() {
       const rows = filteredSkills();
-      els.resultCount.textContent = `显示 ${rows.length} 条，共 ${skills.length} 条记录`;
+      const scopeTotal = scopeSkills().length;
+      els.resultCount.textContent = state.scope === "unique"
+        ? `显示 ${rows.length} 条，共 ${scopeTotal} 个独立 Skill`
+        : `显示 ${rows.length} 条，共 ${scopeTotal} 条收录记录`;
       els.empty.hidden = rows.length > 0;
       els.rows.hidden = rows.length === 0;
 
@@ -1840,6 +1905,7 @@
               <div class="skill-meta">
                 <span class="source-text">${escapeHtml(source.label)}</span>
                 <span class="status ${trust.className}">${escapeHtml(trust.label)}</span>
+                ${state.scope === "unique" && skill.mergedRecordCount > 1 ? `<span class="source-text">已合并 ${skill.mergedRecordCount} 条重复记录</span>` : ""}
                 <div class="tags">${(skill.tags || []).map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join("")}</div>
               </div>
             </td>
@@ -1868,6 +1934,23 @@
       document.getElementById("officialCount").textContent = skills.filter(skill => skill.source === "official").length;
       document.getElementById("hotCount").textContent = skills.filter(skill => skill.metricValue >= 10000 && !["索引文件数"].includes(skill.metricType)).length;
       document.getElementById("bookmarkCount").textContent = state.bookmarks.size;
+      els.scopeFilters.forEach(button => {
+        const active = button.dataset.scope === state.scope;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+
+    function setScope(scope) {
+      state.scope = scope;
+      state.source = "all";
+      state.category = "all";
+      state.query = "";
+      state.bookmarkOnly = false;
+      els.search.value = "";
+      els.category.value = "all";
+      render();
+      showToast(scope === "unique" ? `已切换至 ${scopeSkills().length} 个独立 Skill` : `已恢复 ${skills.length} 条收录记录`);
     }
 
     function toggleBookmark(id) {
@@ -1909,7 +1992,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `文本创作Skill监控_${SNAPSHOT_DATE}.csv`;
+      link.download = `文本创作Skill监控${state.scope === "unique" ? "_独立Skill" : ""}_${SNAPSHOT_DATE}.csv`;
       link.click();
       URL.revokeObjectURL(url);
       showToast(`已导出 ${rows.length} 条记录`);
@@ -2012,6 +2095,7 @@
     }));
     els.export.addEventListener("click", exportCsv);
     els.refresh.addEventListener("click", refreshLiveMetrics);
+    els.scopeFilters.forEach(button => button.addEventListener("click", () => setScope(button.dataset.scope)));
     document.addEventListener("keydown", event => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
