@@ -19,7 +19,7 @@ test("canonical identity uses repository plus skill key instead of name alone", 
 });
 
 test("object and metric scopes are explicit", () => {
-  assert.match(html, /skill\.category === "合集与目录" \? "collection" : "atomic"/);
+  assert.match(html, /skill\.category === "合集与目录" \|\| collectionOverrides\.has\(normalizedName\) \? "collection" : "atomic"/);
   assert.match(html, /direct: \{ label:"直接指标"/);
   assert.match(html, /aggregate: \{ label:"合集指标"/);
   assert.match(html, /inherited: \{ label:"继承指标"/);

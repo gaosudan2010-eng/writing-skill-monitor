@@ -10,6 +10,21 @@ test("known misclassified skills have explicit corrections", () => {
   assert.match(html, /"专业中文写稿助手": "中文创作"/);
 });
 
+test("domain-specific skills take precedence over generic editing", () => {
+  assert.match(html, /"academic-humanizer": "学术论文"/);
+  assert.match(html, /"story-review": "小说与故事"/);
+  assert.match(html, /"post-scorer": "社交媒体"/);
+  assert.match(html, /"research-report-skill": "调研写作"/);
+});
+
+test("multi-skill repositories are collections instead of atomic skills", () => {
+  assert.match(html, /const collectionOverrides = new Set/);
+  assert.match(html, /"scientific-agent-skills"/);
+  assert.match(html, /"baoyu-skills"/);
+  assert.match(html, /"openclaudia-marketing-skills"/);
+  assert.match(html, /collectionOverrides\.has\(normalizedName\) \? "collection" : "atomic"/);
+});
+
 test("first-level Chinese writing categories use primary-task rules", () => {
   assert.match(html, /return "公文写作"/);
   assert.match(html, /return "新媒体写作"/);

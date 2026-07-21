@@ -1207,7 +1207,7 @@
 
       <section class="footnotes">
         <div><strong>对象口径：</strong>平台记录按“仓库 + Skill 路径”归并为原子 Skill；同名但不同作者或仓库的实现不合并。合集与项目单独统计，不计入原子 Skill。</div>
-        <div><strong>分类口径：</strong>按 Skill 的主要任务与交付物分类。去 AI、校对和改写归编辑润色；党政机关规范文本归公文写作；中文媒体平台内容归新媒体写作；论文及其研究发表流程归学术论文。</div>
+        <div><strong>分类口径：</strong>按 Skill 的主要任务与交付物分类，专属对象优先于通用动作。跨对象的去 AI、校对和改写归编辑润色；党政机关规范文本归公文写作；中文媒体平台内容归新媒体写作；论文及其研究发表流程归学术论文。</div>
         <div><strong>指标口径：</strong>安装量和下载量属于原子 Skill 直接指标；合集总量属于聚合指标；GitHub 子 Skill 展示的仓库 Star 属于继承指标。不同层级和平台的指标不相加。</div>
         <div><strong>安全提醒：</strong>公开 Skill 可能包含脚本、命令和外部依赖。安装前检查 <code>SKILL.md</code>、<code>scripts/</code>、权限要求与作者身份；官方市场收录也不等于由 Anthropic 编写。</div>
       </section>
@@ -1828,8 +1828,36 @@
     const categoryOverrides = {
       "humanizer-zh": "编辑润色",
       "latex-thesis-zh": "学术论文",
-      "专业中文写稿助手": "中文创作"
+      "专业中文写稿助手": "中文创作",
+      "academic-humanizer": "学术论文",
+      "nature-polishing": "学术论文",
+      "humanize-academic-writing": "学术论文",
+      "academic-writing-refiner": "学术论文",
+      "story-deslop": "小说与故事",
+      "story-long-analyze": "小说与故事",
+      "story-short-analyze": "小说与故事",
+      "story-long-scan": "小说与故事",
+      "story-short-scan": "小说与故事",
+      "story-review": "小说与故事",
+      "novel-claude-ai": "小说与故事",
+      "post-scorer": "社交媒体",
+      "writing-tone-clone": "品牌与营销",
+      "profile-optimizer": "社交媒体",
+      "market-report": "调研写作",
+      "research-report-skill": "调研写作"
     };
+
+    const collectionOverrides = new Set([
+      "academic-research-skills",
+      "nature-skills",
+      "scientific-agent-skills",
+      "awesome-ai-research-writing",
+      "baoyu-skills",
+      "claude-seo",
+      "minimax-official-skills",
+      "k-skill-writing",
+      "openclaudia-marketing-skills"
+    ]);
 
     function classifyCategory(skill) {
       const name = String(skill.name || skill.key || "");
@@ -1838,7 +1866,7 @@
       const text = `${name} ${tags} ${description}`;
       const normalizedName = normalizeIdentity(name);
 
-      if (skill.category === "合集与目录") return skill.category;
+      if (skill.category === "合集与目录" || collectionOverrides.has(normalizedName)) return "合集与目录";
       if (categoryOverrides[normalizedName]) return categoryOverrides[normalizedName];
 
       const editingName = /humaniz|proofread|proofreading|polish|polishing|refiner|de-ai|去-?ai|去 ai|校对|校验|润色|shuorenhua|renwei|speak-human/i;
@@ -1859,7 +1887,8 @@
     }
 
     function enrichRecord(skill) {
-      const objectType = skill.objectType || (skill.category === "合集与目录" ? "collection" : "atomic");
+      const normalizedName = normalizeIdentity(skill.name || skill.key || "");
+      const objectType = skill.objectType || (skill.category === "合集与目录" || collectionOverrides.has(normalizedName) ? "collection" : "atomic");
       const category = classifyCategory(skill);
       const parentProject = repositoryFromRecord(skill);
       const skillPath = skillPathFromRecord(skill);
