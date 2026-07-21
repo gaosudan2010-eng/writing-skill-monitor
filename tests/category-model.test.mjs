@@ -15,6 +15,7 @@ test("domain-specific skills take precedence over generic editing", () => {
   assert.match(html, /"story-review": "小说与故事"/);
   assert.match(html, /"post-scorer": "社交媒体"/);
   assert.match(html, /"research-report-skill": "调研写作"/);
+  assert.match(html, /"copy-editing": "品牌与营销"/);
 });
 
 test("multi-skill repositories are collections instead of atomic skills", () => {
