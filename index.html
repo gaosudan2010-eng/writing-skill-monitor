@@ -203,6 +203,62 @@
     }
     .summary-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+    .object-badge,
+    .metric-scope {
+      display: inline-flex;
+      align-items: center;
+      min-height: 18px;
+      padding: 1px 5px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #f7f7f5;
+      font-size: 9px;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+    .object-badge.atomic,
+    .metric-scope.direct { color: var(--accent); border-color: #bfd8ce; background: #eef7f3; }
+    .object-badge.collection,
+    .metric-scope.aggregate,
+    .metric-scope.project { color: #8a5b13; border-color: #e5cfaa; background: #fff8ea; }
+    .metric-scope.inherited { color: #6a657a; border-color: #d7d2e2; background: #f5f2f9; }
+
+    .source-details { position: relative; }
+    .source-details summary {
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 700;
+      list-style: none;
+    }
+    .source-details summary::-webkit-details-marker { display: none; }
+    .source-details summary::after { content: " +"; }
+    .source-details[open] summary::after { content: " -"; }
+    .source-records {
+      position: absolute;
+      z-index: 5;
+      top: calc(100% + 7px);
+      left: 0;
+      width: min(430px, 70vw);
+      padding: 9px 12px;
+      background: white;
+      border: 1px solid var(--line-strong);
+      box-shadow: 0 10px 30px rgba(32, 30, 28, 0.12);
+    }
+    .source-record {
+      display: grid;
+      grid-template-columns: minmax(82px, auto) 1fr auto;
+      gap: 10px;
+      padding: 7px 0;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      font-size: 10px;
+      text-decoration: none;
+    }
+    .source-record:last-child { border-bottom: 0; }
+    .source-record:hover { color: var(--ink); }
+    .parent-project { color: #77726f; font-size: 10px; }
+
     .summary-item:last-child { border-right: 0; }
     .summary-label { color: var(--muted); font-size: 12px; margin-bottom: 5px; }
     .summary-value { font-size: 25px; line-height: 1.15; font-weight: 760; font-variant-numeric: tabular-nums; }
@@ -1069,30 +1125,30 @@
       </section>
 
       <section class="summary-band" aria-label="监控摘要">
-        <button class="summary-item summary-filter active" id="allRecordsFilter" type="button" data-scope="all" aria-pressed="true">
-          <div class="summary-label">收录记录</div>
+        <button class="summary-item summary-filter" id="allRecordsFilter" type="button" data-scope="all" aria-pressed="false">
+          <div class="summary-label">平台记录</div>
           <div class="summary-value" id="totalCount">0</div>
-          <div class="summary-note">按平台分别记录</div>
+          <div class="summary-note">同一 Skill 可有多条</div>
         </button>
-        <button class="summary-item summary-filter" id="uniqueSkillsFilter" type="button" data-scope="unique" aria-pressed="false">
-          <div class="summary-label">独立 Skill / 项目</div>
-          <div class="summary-value" id="uniqueCount">0</div>
-          <div class="summary-note">每个 Skill 仅保留一条</div>
+        <button class="summary-item summary-filter active" id="atomicSkillsFilter" type="button" data-scope="atomic" aria-pressed="true">
+          <div class="summary-label">原子 Skill</div>
+          <div class="summary-value" id="atomicCount">0</div>
+          <div class="summary-note">默认研究口径</div>
+        </button>
+        <button class="summary-item summary-filter" id="collectionFilter" type="button" data-scope="collection" aria-pressed="false">
+          <div class="summary-label">合集 / 项目</div>
+          <div class="summary-value" id="collectionCount">0</div>
+          <div class="summary-note">不计入原子 Skill</div>
         </button>
         <div class="summary-item">
-          <div class="summary-label">Anthropic 官方</div>
-          <div class="summary-value" id="officialCount">0</div>
-          <div class="summary-note">官方仓库与插件</div>
+          <div class="summary-label">能力分类</div>
+          <div class="summary-value" id="capabilityCount">0</div>
+          <div class="summary-note">基于原子 Skill 分类</div>
         </div>
         <div class="summary-item">
-          <div class="summary-label">10K+ 热度</div>
-          <div class="summary-value" id="hotCount">0</div>
-          <div class="summary-note">站内指标，不跨站相加</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">已收藏</div>
-          <div class="summary-value" id="bookmarkCount">0</div>
-          <div class="summary-note">保存在本机浏览器</div>
+          <div class="summary-label">已核验</div>
+          <div class="summary-value" id="verifiedCount">0</div>
+          <div class="summary-note">官方或来源已核验</div>
         </div>
       </section>
 
@@ -1100,8 +1156,8 @@
         <nav class="source-tabs" id="sourceTabs" aria-label="来源分类"></nav>
         <div class="browse-actions">
           <select class="select" id="sortSelect" aria-label="排序方式">
-            <option value="metric-desc">热度从高到低</option>
-            <option value="priority">推荐优先</option>
+            <option value="priority" selected>推荐优先</option>
+            <option value="metric-desc">热度（同平台参考）</option>
             <option value="name">名称 A-Z</option>
             <option value="verified">可信级别</option>
           </select>
@@ -1134,7 +1190,7 @@
               <thead>
                 <tr>
                   <th aria-label="收藏"></th>
-                  <th>Skill</th>
+                  <th>对象</th>
                   <th>类别</th>
                   <th>热度</th>
                 </tr>
@@ -1143,14 +1199,15 @@
             </table>
             <div class="empty" id="emptyState" hidden>
               <i data-lucide="search-x"></i>
-              <div>没有符合当前条件的 Skill</div>
+              <div>没有符合当前条件的对象</div>
             </div>
           </div>
         </section>
       </div>
 
       <section class="footnotes">
-        <div><strong>数据口径：</strong>只收录公开热度不低于 500 的文本创作 Skill。Skills.sh 与 Claude 官方显示 CLI 安装量，ClawHub 显示站内下载量；GitHub 子 Skill 继承所属仓库 Star，并明确标注。不同平台指标不跨站相加。</div>
+        <div><strong>对象口径：</strong>平台记录按“仓库 + Skill 路径”归并为原子 Skill；同名但不同作者或仓库的实现不合并。合集与项目单独统计，不计入原子 Skill。</div>
+        <div><strong>指标口径：</strong>安装量和下载量属于原子 Skill 直接指标；合集总量属于聚合指标；GitHub 子 Skill 展示的仓库 Star 属于继承指标。不同层级和平台的指标不相加。</div>
         <div><strong>安全提醒：</strong>公开 Skill 可能包含脚本、命令和外部依赖。安装前检查 <code>SKILL.md</code>、<code>scripts/</code>、权限要求与作者身份；官方市场收录也不等于由 Anthropic 编写。</div>
       </section>
     </main>
@@ -1704,12 +1761,106 @@
       pending: { label:"安装前复核", className:"pending", rank:1 }
     };
 
+    const objectMeta = {
+      atomic: { label:"原子 Skill", className:"atomic" },
+      collection: { label:"合集 / 项目", className:"collection" }
+    };
+
+    const metricScopeMeta = {
+      direct: { label:"直接指标", className:"direct", rank:4 },
+      aggregate: { label:"合集指标", className:"aggregate", rank:3 },
+      project: { label:"项目指标", className:"project", rank:2 },
+      inherited: { label:"继承指标", className:"inherited", rank:1 }
+    };
+
+    function normalizeIdentity(value) {
+      return String(value || "unknown")
+        .trim()
+        .replace(/^@/, "")
+        .replace(/\.git$/i, "")
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+    }
+
+    function repositoryFromRecord(skill) {
+      if (skill.repo) return normalizeIdentity(skill.repo);
+      try {
+        const url = new URL(skill.url);
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (["github.com", "www.github.com", "skills.sh", "www.skills.sh"].includes(url.hostname) && parts.length >= 2) {
+          return normalizeIdentity(`${parts[0]}/${parts[1]}`);
+        }
+      } catch (error) {}
+      const author = normalizeIdentity(skill.author);
+      return author.includes("/") ? author : `${normalizeIdentity(skill.source)}/${author}`;
+    }
+
+    function skillPathFromRecord(skill) {
+      if (skill.skillPath) return normalizeIdentity(skill.skillPath);
+      try {
+        const url = new URL(skill.url);
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (["skills.sh", "www.skills.sh"].includes(url.hostname) && parts.length >= 3) {
+          return normalizeIdentity(parts.slice(2).join("/"));
+        }
+        if (["github.com", "www.github.com"].includes(url.hostname) && parts.length >= 2) {
+          const modeIndex = parts.findIndex(part => ["tree", "blob"].includes(part));
+          let path = modeIndex >= 0 ? parts.slice(modeIndex + 2) : [];
+          if (path.at(-1)?.toLowerCase() === "skill.md") path = path.slice(0, -1);
+          const skillsIndex = path.lastIndexOf("skills");
+          if (skillsIndex >= 0) path = path.slice(skillsIndex + 1);
+          if (path.length) return normalizeIdentity(path.join("/"));
+        }
+      } catch (error) {}
+      return normalizeIdentity(skill.key || skill.name || skill.id);
+    }
+
+    function initialMetricScope(skill, objectType) {
+      if (objectType === "collection") {
+        return /安装|下载|收录 Skill|索引文件数|合计|总量/.test(skill.metricType) ? "aggregate" : "project";
+      }
+      if (/继承/.test(skill.metricType)) return "inherited";
+      if (/Star/.test(skill.metricType)) return "project";
+      return "direct";
+    }
+
+    function enrichRecord(skill) {
+      const objectType = skill.objectType || (skill.category === "合集与目录" ? "collection" : "atomic");
+      const parentProject = repositoryFromRecord(skill);
+      const skillPath = skillPathFromRecord(skill);
+      const canonicalSkillId = skill.canonicalSkillId || (objectType === "atomic"
+        ? `${parentProject}::${skillPath}`
+        : `collection::${parentProject}`);
+      return {
+        ...skill,
+        objectType,
+        parentProject,
+        skillPath,
+        canonicalSkillId,
+        metricScope: skill.metricScope || initialMetricScope(skill, objectType)
+      };
+    }
+
+    skills = skills.map(enrichRecord);
+
+    const repoSkillCounts = new Map();
+    skills.filter(skill => skill.objectType === "atomic").forEach(skill => {
+      if (!repoSkillCounts.has(skill.parentProject)) repoSkillCounts.set(skill.parentProject, new Set());
+      repoSkillCounts.get(skill.parentProject).add(skill.canonicalSkillId);
+    });
+    skills = skills.map(skill => ({
+      ...skill,
+      metricScope: skill.objectType === "atomic" && /Star/.test(skill.metricType) && repoSkillCounts.get(skill.parentProject)?.size > 1
+        ? "inherited"
+        : skill.metricScope
+    }));
+
     const state = {
-      scope: "all",
+      scope: "atomic",
       source: "all",
       query: "",
       category: "all",
-      sort: "metric-desc",
+      sort: "priority",
       bookmarkOnly: false,
       view: "list",
       bookmarks: new Set(JSON.parse(localStorage.getItem("writing-skill-bookmarks") || "[]"))
@@ -1752,16 +1903,17 @@
 
     const sourceRank = { official:4, skillssh:3, clawhub:2, github:1 };
 
-    function independentSkills() {
+    function aggregateRecords(records) {
       const groups = new Map();
-      skills.forEach(skill => {
-        const key = skill.key || skill.id;
+      records.forEach(skill => {
+        const key = skill.canonicalSkillId;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(skill);
       });
 
       return [...groups.values()].map(group => {
         const representative = [...group].sort((a, b) =>
+          (metricScopeMeta[b.metricScope]?.rank || 0) - (metricScopeMeta[a.metricScope]?.rank || 0) ||
           (sourceRank[b.source] || 0) - (sourceRank[a.source] || 0) ||
           (trustMeta[b.trust]?.rank || 0) - (trustMeta[a.trust]?.rank || 0) ||
           (b.priority || 0) - (a.priority || 0) ||
@@ -1770,18 +1922,38 @@
         return {
           ...representative,
           mergedRecordCount: group.length,
-          mergedSources: [...new Set(group.map(skill => skill.source))]
+          mergedSources: [...new Set(group.map(skill => skill.source))],
+          sourceRecords: [...group].sort((a, b) =>
+            (metricScopeMeta[b.metricScope]?.rank || 0) - (metricScopeMeta[a.metricScope]?.rank || 0) ||
+            (sourceRank[b.source] || 0) - (sourceRank[a.source] || 0)
+          ),
+          bookmarkId: `object:${representative.canonicalSkillId}`
         };
       });
     }
 
+    function catalogObjects() {
+      const atomic = aggregateRecords(skills.filter(skill => skill.objectType === "atomic"));
+      const collection = aggregateRecords(skills.filter(skill => skill.objectType === "collection")).map(item => ({
+        ...item,
+        childSkills: atomic.filter(skill => skill.parentProject === item.parentProject)
+      }));
+      return { atomic, collection };
+    }
+
     function scopeSkills() {
-      return state.scope === "unique" ? independentSkills() : skills;
+      if (state.scope === "all") return skills;
+      return catalogObjects()[state.scope];
+    }
+
+    function matchesSource(skill, source) {
+      if (source === "all") return true;
+      return (skill.sourceRecords || [skill]).some(record => record.source === source);
     }
 
     function sourceCount(source) {
       const scoped = scopeSkills();
-      return source === "all" ? scoped.length : scoped.filter(skill => skill.source === source).length;
+      return source === "all" ? scoped.length : scoped.filter(skill => matchesSource(skill, source)).length;
     }
 
     function renderTabs() {
@@ -1829,7 +2001,7 @@
 
     function renderCategoryNav() {
       const scoped = scopeSkills();
-      const sourceSkills = state.source === "all" ? scoped : scoped.filter(skill => skill.source === state.source);
+      const sourceSkills = state.source === "all" ? scoped : scoped.filter(skill => matchesSource(skill, state.source));
       const entries = [
         { key:"all", label:"全部类别", icon:"layers-3", count:sourceSkills.length },
         ...categories.map(category => ({
@@ -1852,11 +2024,19 @@
     function filteredSkills() {
       const query = state.query.trim().toLowerCase();
       const result = scopeSkills().filter(skill => {
-        if (state.source !== "all" && skill.source !== state.source) return false;
+        if (!matchesSource(skill, state.source)) return false;
         if (state.category !== "all" && skill.category !== state.category) return false;
-        if (state.bookmarkOnly && !state.bookmarks.has(skill.id)) return false;
+        if (state.bookmarkOnly && !isBookmarked(skill)) return false;
         if (!query) return true;
-        return [skill.name, skill.author, skill.category, skill.description, ...(skill.tags || [])]
+        return [
+          skill.name,
+          skill.author,
+          skill.parentProject,
+          skill.category,
+          skill.description,
+          ...(skill.tags || []),
+          ...(skill.sourceRecords || []).flatMap(record => [record.name, record.author, record.source])
+        ]
           .join(" ").toLowerCase().includes(query);
       });
 
@@ -1879,33 +2059,68 @@
     function renderRows() {
       const rows = filteredSkills();
       const scopeTotal = scopeSkills().length;
-      els.resultCount.textContent = state.scope === "unique"
-        ? `显示 ${rows.length} 条，共 ${scopeTotal} 个独立 Skill`
-        : `显示 ${rows.length} 条，共 ${scopeTotal} 条收录记录`;
+      const scopeLabel = state.scope === "atomic" ? "个原子 Skill" : state.scope === "collection" ? "个合集 / 项目" : "条平台记录";
+      els.resultCount.textContent = `显示 ${rows.length} 条，共 ${scopeTotal} ${scopeLabel}`;
       els.empty.hidden = rows.length > 0;
       els.rows.hidden = rows.length === 0;
 
       els.rows.innerHTML = rows.map(skill => {
         const source = sourceMeta[skill.source];
         const trust = trustMeta[skill.trust];
+        const object = objectMeta[skill.objectType];
+        const metricScope = metricScopeMeta[skill.metricScope];
         const metricIcon = skill.metricType.includes("Star") ? "star" : skill.metricType.includes("下载") || skill.metricType.includes("安装") ? "download" : "activity";
+        const bookmarkId = skill.bookmarkId || skill.id;
+        const bookmarked = isBookmarked(skill);
+        const sourceRecords = skill.sourceRecords || [skill];
+        const sourceDetails = state.scope === "all" ? "" : `
+          <details class="source-details">
+            <summary>${sourceRecords.length} 条平台记录</summary>
+            <div class="source-records">
+              ${sourceRecords.map(record => `
+                <a class="source-record" href="${escapeHtml(record.url)}" target="_blank" rel="noopener noreferrer">
+                  <strong>${escapeHtml(sourceMeta[record.source].label)}</strong>
+                  <span>${escapeHtml(record.metricType)}</span>
+                  <span>${escapeHtml(displayMetric(record))}</span>
+                </a>
+              `).join("")}
+            </div>
+          </details>
+        `;
+        const childDetails = skill.objectType === "collection" && skill.childSkills?.length ? `
+          <details class="source-details">
+            <summary>已收录 ${skill.childSkills.length} 个子 Skill</summary>
+            <div class="source-records">
+              ${skill.childSkills.map(child => `
+                <a class="source-record" href="${escapeHtml(child.url)}" target="_blank" rel="noopener noreferrer">
+                  <strong>${escapeHtml(child.name)}</strong>
+                  <span>${escapeHtml(child.category)}</span>
+                  <span>${escapeHtml(displayMetric(child))}</span>
+                </a>
+              `).join("")}
+            </div>
+          </details>
+        ` : "";
         return `
-          <tr>
+          <tr data-object-type="${escapeHtml(skill.objectType)}" data-canonical-id="${escapeHtml(skill.canonicalSkillId)}">
             <td>
-              <button class="bookmark ${state.bookmarks.has(skill.id) ? "active" : ""}" type="button" data-bookmark="${escapeHtml(skill.id)}" title="${state.bookmarks.has(skill.id) ? "取消收藏" : "收藏"}">
-                <span aria-hidden="true">${state.bookmarks.has(skill.id) ? "★" : "☆"}</span>
+              <button class="bookmark ${bookmarked ? "active" : ""}" type="button" data-bookmark="${escapeHtml(bookmarkId)}" title="${bookmarked ? "取消收藏" : "收藏"}">
+                <span aria-hidden="true">${bookmarked ? "★" : "☆"}</span>
               </button>
             </td>
             <td>
               <div class="skill-heading">
                 <a class="skill-name" href="${escapeHtml(skill.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(skill.name)}<i data-lucide="arrow-up-right"></i></a>
                 <span class="skill-author">${escapeHtml(skill.author)}</span>
+                <span class="object-badge ${object.className}">${escapeHtml(object.label)}</span>
               </div>
               <div class="skill-description" title="${escapeHtml(skill.description)}">${escapeHtml(skill.description)}</div>
               <div class="skill-meta">
                 <span class="source-text">${escapeHtml(source.label)}</span>
                 <span class="status ${trust.className}">${escapeHtml(trust.label)}</span>
-                ${state.scope === "unique" && skill.mergedRecordCount > 1 ? `<span class="source-text">已合并 ${skill.mergedRecordCount} 条重复记录</span>` : ""}
+                <span class="parent-project">所属项目：${escapeHtml(skill.parentProject)}</span>
+                ${sourceDetails}
+                ${childDetails}
                 <div class="tags">${(skill.tags || []).map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join("")}</div>
               </div>
             </td>
@@ -1915,6 +2130,7 @@
                 <div class="metric-block">
                   <div class="metric-value"><i data-lucide="${metricIcon}"></i> ${escapeHtml(displayMetric(skill))}</div>
                   <div class="metric-type">${escapeHtml(skill.metricType)}</div>
+                  <span class="metric-scope ${metricScope.className}">${escapeHtml(metricScope.label)}</span>
                   ${skill.trend ? `<div class="trend">${escapeHtml(skill.trend)}</div>` : ""}
                 </div>
                 <a class="open-link" href="${escapeHtml(skill.url)}" target="_blank" rel="noopener noreferrer" title="打开原始来源"><i data-lucide="arrow-up-right"></i></a>
@@ -1929,11 +2145,14 @@
     }
 
     function renderSummary() {
+      const catalog = catalogObjects();
       document.getElementById("totalCount").textContent = skills.length;
-      document.getElementById("uniqueCount").textContent = new Set(skills.map(skill => skill.key)).size;
-      document.getElementById("officialCount").textContent = skills.filter(skill => skill.source === "official").length;
-      document.getElementById("hotCount").textContent = skills.filter(skill => skill.metricValue >= 10000 && !["索引文件数"].includes(skill.metricType)).length;
-      document.getElementById("bookmarkCount").textContent = state.bookmarks.size;
+      document.getElementById("atomicCount").textContent = catalog.atomic.length;
+      document.getElementById("collectionCount").textContent = catalog.collection.length;
+      document.getElementById("capabilityCount").textContent = new Set(catalog.atomic.map(skill => skill.category)).size;
+      document.getElementById("verifiedCount").textContent = catalog.atomic.filter(skill =>
+        skill.sourceRecords.some(record => ["official", "verified"].includes(record.trust))
+      ).length;
       els.scopeFilters.forEach(button => {
         const active = button.dataset.scope === state.scope;
         button.classList.toggle("active", active);
@@ -1950,7 +2169,17 @@
       els.search.value = "";
       els.category.value = "all";
       render();
-      showToast(scope === "unique" ? `已切换至 ${scopeSkills().length} 个独立 Skill` : `已恢复 ${skills.length} 条收录记录`);
+      const message = scope === "atomic"
+        ? `已切换至 ${scopeSkills().length} 个原子 Skill`
+        : scope === "collection"
+          ? `已切换至 ${scopeSkills().length} 个合集 / 项目`
+          : `已恢复 ${skills.length} 条平台记录`;
+      showToast(message);
+    }
+
+    function isBookmarked(skill) {
+      if (state.bookmarks.has(skill.bookmarkId || skill.id)) return true;
+      return (skill.sourceRecords || []).some(record => state.bookmarks.has(record.id));
     }
 
     function toggleBookmark(id) {
@@ -1985,14 +2214,30 @@
 
     function exportCsv() {
       const rows = filteredSkills();
-      const header = ["名称","作者","来源","类别","用途","热度","口径","可信级别","链接"];
-      const body = rows.map(skill => [skill.name, skill.author, sourceMeta[skill.source].label, skill.category, skill.description, displayMetric(skill), skill.metricType, trustMeta[skill.trust].label, skill.url]);
+      const header = ["对象类型","Canonical ID","名称","作者","所属项目","代表来源","平台记录数","类别","用途","热度","指标","指标归属","可信级别","链接"];
+      const body = rows.map(skill => [
+        objectMeta[skill.objectType].label,
+        skill.canonicalSkillId,
+        skill.name,
+        skill.author,
+        skill.parentProject,
+        sourceMeta[skill.source].label,
+        (skill.sourceRecords || [skill]).length,
+        skill.category,
+        skill.description,
+        displayMetric(skill),
+        skill.metricType,
+        metricScopeMeta[skill.metricScope].label,
+        trustMeta[skill.trust].label,
+        skill.url
+      ]);
       const csv = "\ufeff" + [header, ...body].map(row => row.map(csvCell).join(",")).join("\n");
       const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `文本创作Skill监控${state.scope === "unique" ? "_独立Skill" : ""}_${SNAPSHOT_DATE}.csv`;
+      const scopeName = state.scope === "atomic" ? "_原子Skill" : state.scope === "collection" ? "_合集项目" : "_平台记录";
+      link.download = `文本创作Skill监控${scopeName}_${SNAPSHOT_DATE}.csv`;
       link.click();
       URL.revokeObjectURL(url);
       showToast(`已导出 ${rows.length} 条记录`);
